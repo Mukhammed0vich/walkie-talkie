@@ -182,12 +182,11 @@ export default function App() {
   const handlePressStart = useCallback(async (e) => {
     if (e) {
       e.preventDefault()
-      // mobil da scroll va context menyuni bloklash
       e.stopPropagation()
     }
     if (!selectedId) return
+    if (isRecording) return
     if (talking && talking.from !== myId) return
-    // iOS da audio unlock
     unlockAudio()
     // telefonda MediaRecorder mavjudligini tekshirish
     if (typeof MediaRecorder === 'undefined') {
@@ -216,7 +215,7 @@ export default function App() {
         setPermissionDenied(true)
       }
     }
-  }, [selectedId, talking, myId, ensureMic, ratsia, startVisualizer, getSupportedMimeType, unlockAudio])
+  }, [selectedId, talking, myId, isRecording, ensureMic, ratsia, startVisualizer, getSupportedMimeType, unlockAudio])
 
   const handlePressEnd = useCallback((e) => {
     if (e) e.preventDefault()
@@ -433,8 +432,13 @@ export default function App() {
                 onPointerUp={handlePressEnd}
                 onPointerLeave={handlePressEnd}
                 onPointerCancel={handlePressEnd}
+                onMouseDown={handlePressStart}
+                onMouseUp={handlePressEnd}
+                onMouseLeave={handlePressEnd}
+                onTouchStart={handlePressStart}
+                onTouchEnd={handlePressEnd}
                 onContextMenu={(e) => e.preventDefault()}
-                style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
+                style={{ touchAction: 'none' }}
                 disabled={!selectedId || !selected?.online || (talking && talking.from !== myId && talking.to !== myId && talking.from !== selectedId)}
                 className={`relative w-[220px] h-[220px] md:w-[260px] md:h-[260px] rounded-full border-[8px] flex flex-col items-center justify-center gap-2 select-none touch-manipulation transition-all
                   ${isRecording ? 'bg-[#ff3b30] border-[#ff3b30] text-white scale-[0.98] shadow-[0_0_40px_rgba(255,59,48,0.5)]' : 'bg-white border-white text-black hover:scale-[1.01] active:scale-[0.98] shadow-[0_12px_32px_rgba(0,0,0,0.25)]'}
