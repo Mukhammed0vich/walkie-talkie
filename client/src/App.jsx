@@ -4,14 +4,14 @@ import { useRatsia } from './hooks/useRatsia.js'
 const DEFAULT_SERVER = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
 
 const FALLBACK_TEAM = [
-  { id: "ceo", name: "Sardor", role: "CEO", avatar: "S" },
-  { id: "cofounder", name: "Javohir", role: "CO-FOUNDER", avatar: "J" },
-  { id: "md", name: "Jasur", role: "Managing Director", avatar: "J" },
-  { id: "aziza", name: "Aziza", role: "Dizayner", avatar: "A" },
-  { id: "bobur", name: "Bobur", role: "Sotuv", avatar: "B" },
-  { id: "dilnoza", name: "Dilnoza", role: "HR", avatar: "D" },
-  { id: "farhod", name: "Farhod", role: "Dasturchi", avatar: "F" },
-  { id: "laylo", name: "Laylo", role: "Marketing", avatar: "L" },
+  { id: "ceo", name: "Eldor Egamberdiyev", role: "CEO", avatar: "E" },
+  { id: "cofounder", name: "Ro'zmamat Boltayev", role: "CO-FOUNDER", avatar: "R" },
+  { id: "md", name: "Azamat Abdullayev", role: "Managing Director", avatar: "A" },
+  { id: "feruza", name: "Feruza Rizayeva", role: "Sale & Call", avatar: "F" },
+  { id: "komila", name: "Komila Odilova", role: "Sale & Call", avatar: "K" },
+  { id: "abdurakhmon", name: "Abdurakhmon", role: "SMM", avatar: "A" },
+  { id: "xursand", name: "Xursand", role: "Service manager", avatar: "X" },
+  { id: "egamberdi", name: "Egamberdi", role: "Service manager", avatar: "E" },
 ]
 
 function getInitialServerUrl() {
