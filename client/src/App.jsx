@@ -61,17 +61,6 @@ export default function App() {
   // login bo'lmaganda roster, login bo'lganda socket team ishlatilsin
   const displayTeam = myId ? (team.length ? team : roster) : roster
 
-  // mobil da audio unlock — birinchi bosishda AudioContext ni resume qilish (iOS autoplay block uchun)
-  useEffect(() => {
-    const unlock = () => unlockAudio()
-    document.addEventListener('click', unlock, { once: true })
-    document.addEventListener('touchstart', unlock, { once: true })
-    return () => {
-      document.removeEventListener('click', unlock)
-      document.removeEventListener('touchstart', unlock)
-    }
-  }, [unlockAudio])
-
   useEffect(() => {
     if (!error) return
     const t = setTimeout(clearError, 4000)
@@ -98,47 +87,9 @@ export default function App() {
   const getSelectedUser = () => displayTeam.find(u => u.id === selectedId)
   const getMe = () => displayTeam.find(u => u.id === myId)
 
-  const getSupportedMimeType = useCallback(() => {
-    // mobil cross-platform uchun mp4 ni birinchi tekshiramiz (iOS/Android ikkalasida ham play bo'ladi)
-    const candidates = [
-      'audio/mp4',
-      'audio/aac',
-      'audio/webm;codecs=opus',
-      'audio/webm',
-      'audio/ogg;codecs=opus',
-      ''
-    ]
-    for (const t of candidates) {
-      if (!t) return ''
-      try {
-        if (MediaRecorder.isTypeSupported(t)) return t
-      } catch {}
-    }
-    return ''
-  }, [])
-
-  const unlockAudio = useCallback(async () => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      if (ctx.state === 'suspended') await ctx.resume()
-      // iOS da audio unlock uchun bo'sh buffer chalish
-      const buf = ctx.createBuffer(1, 1, 22050)
-      const src = ctx.createBufferSource()
-      src.buffer = buf
-      src.connect(ctx.destination)
-      src.start(0)
-      setTimeout(() => ctx.close(), 500)
-    } catch {}
-  }, [])
-
   const ensureMic = useCallback(async () => {
     if (mediaRef.current) return mediaRef.current
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setPermissionDenied(true)
-      throw new Error('Brauzer mikrofonni qo‘llab-quvvatlamaydi')
-    }
     try {
-      // mobil uchun soddaroq constraint — aksariyat telefonda yaxshiroq ishlaydi
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -180,29 +131,17 @@ export default function App() {
   }, [])
 
   const handlePressStart = useCallback(async (e) => {
-    if (e) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
+    if (e) e.preventDefault()
     if (!selectedId) return
-    if (isRecording) return
     if (talking && talking.from !== myId) return
-    unlockAudio()
-    // telefonda MediaRecorder mavjudligini tekshirish
-    if (typeof MediaRecorder === 'undefined') {
-      alert('Bu brauzer ovoz yozishni qo‘llab-quvvatlamaydi. Chrome yoki Safari ni yangilang.')
-      return
-    }
     try {
       const stream = await ensureMic()
       ratsia.sendStart(selectedId)
       chunksRef.current = []
-      const mimeType = getSupportedMimeType()
-      const rec = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
+      const rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm' })
       rec.ondataavailable = (ev) => {
         if (ev.data && ev.data.size > 0) chunksRef.current.push(ev.data)
       }
-      rec.onerror = (ev) => console.error('recorder error', ev)
       rec.start(100)
       recorderRef.current = rec
       setIsRecording(true)
@@ -210,12 +149,8 @@ export default function App() {
       if (navigator.vibrate) navigator.vibrate(30)
     } catch (err) {
       console.error(err)
-      // mobil da ruxsat berilmagan bo'lsa tushunarli xabar
-      if (err?.name === 'NotAllowedError') {
-        setPermissionDenied(true)
-      }
     }
-  }, [selectedId, talking, myId, isRecording, ensureMic, ratsia, startVisualizer, getSupportedMimeType, unlockAudio])
+  }, [selectedId, talking, myId, ensureMic, ratsia, startVisualizer])
 
   const handlePressEnd = useCallback((e) => {
     if (e) e.preventDefault()
@@ -223,12 +158,11 @@ export default function App() {
     const rec = recorderRef.current
     if (rec && rec.state !== 'inactive') {
       rec.onstop = async () => {
-        const type = rec.mimeType || getSupportedMimeType() || 'audio/mp4'
-        const blob = new Blob(chunksRef.current, { type })
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' })
         if (blob.size < 300) {
           ratsia.sendCancel(selectedId)
         } else {
-          ratsia.sendBlob(selectedId, blob, type)
+          ratsia.sendBlob(selectedId, blob)
         }
         ratsia.sendEnd(selectedId)
         chunksRef.current = []
@@ -239,7 +173,7 @@ export default function App() {
     }
     setIsRecording(false)
     stopVisualizer()
-  }, [isRecording, ratsia, selectedId, stopVisualizer, getSupportedMimeType])
+  }, [isRecording, ratsia, selectedId, stopVisualizer])
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -334,8 +268,7 @@ export default function App() {
       {permissionDenied && (
         <div className="max-w-[1280px] mx-auto w-full px-4 md:px-6 mt-3">
           <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3">
-            <b>Mikrofon ruxsati berilmadi.</b> Telefonda: brauzer manzil satrining chapidagi 🔒 yoki ℹ️ ni bosing → <b>Mikrofon → Ruxsat berish</b> → sahifani yangilang. iPhone da: <b>Sozlamalar → Safari → Mikrofon</b> ni tekshiring. Keyin <b>“Mikrofonni tekshirish”</b> ni bosing.
-            <button onClick={async () => { try { await ensureMic(); setPermissionDenied(false); } catch {} }} className="mt-2 text-xs px-3 py-1.5 rounded-full bg-amber-600 text-white font-semibold">Qayta urinib ko'rish</button>
+            <b>Mikrofon ruxsati berilmadi.</b> Brauzer sozlamasidan mikrofonni yoqing va sahifani yangilang.
           </div>
         </div>
       )}
@@ -428,17 +361,11 @@ export default function App() {
             <div className="mt-8 relative">
               <div className={`absolute inset-0 rounded-full blur-2xl transition ${isRecording ? 'bg-[#ff3b30]/30 scale-110' : 'bg-white/5'}`} />
               <button
-                onPointerDown={handlePressStart}
-                onPointerUp={handlePressEnd}
-                onPointerLeave={handlePressEnd}
-                onPointerCancel={handlePressEnd}
                 onMouseDown={handlePressStart}
                 onMouseUp={handlePressEnd}
                 onMouseLeave={handlePressEnd}
                 onTouchStart={handlePressStart}
                 onTouchEnd={handlePressEnd}
-                onContextMenu={(e) => e.preventDefault()}
-                style={{ touchAction: 'none' }}
                 disabled={!selectedId || !selected?.online || (talking && talking.from !== myId && talking.to !== myId && talking.from !== selectedId)}
                 className={`relative w-[220px] h-[220px] md:w-[260px] md:h-[260px] rounded-full border-[8px] flex flex-col items-center justify-center gap-2 select-none touch-manipulation transition-all
                   ${isRecording ? 'bg-[#ff3b30] border-[#ff3b30] text-white scale-[0.98] shadow-[0_0_40px_rgba(255,59,48,0.5)]' : 'bg-white border-white text-black hover:scale-[1.01] active:scale-[0.98] shadow-[0_12px_32px_rgba(0,0,0,0.25)]'}

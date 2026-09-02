@@ -54,58 +54,42 @@ export function useRatsia(serverUrl, userId) {
       } catch {}
     })
     socket.on('ptt:incoming:end', () => setIncoming(null))
-    socket.on('ptt:blob', async ({ from, blob, mimeType }) => {
+    socket.on('ptt:blob', async ({ from, blob }) => {
       try {
-        const type = mimeType || 'audio/webm'
         let audioBlob = blob
+        // socket.io may send ArrayBuffer or Blob or base64
         if (blob instanceof ArrayBuffer) {
-          audioBlob = new Blob([blob], { type })
+          audioBlob = new Blob([blob], { type: 'audio/webm' })
         } else if (Array.isArray(blob)) {
-          audioBlob = new Blob([new Uint8Array(blob)], { type })
+          audioBlob = new Blob([new Uint8Array(blob)], { type: 'audio/webm' })
         } else if (typeof blob === 'string' && blob.startsWith('data:')) {
           const res = await fetch(blob)
           audioBlob = await res.blob()
         }
         if (!(audioBlob instanceof Blob)) {
-          audioBlob = new Blob([audioBlob], { type })
-        }
-        // agar blob type bo'sh bo'lsa, mimeType ni qo'llash
-        if (!audioBlob.type && type) {
-          audioBlob = new Blob([audioBlob], { type })
+          audioBlob = new Blob([audioBlob], { type: 'audio/webm' })
         }
         setLastBlob({ from, at: Date.now() })
         const url = URL.createObjectURL(audioBlob)
         const audio = new Audio(url)
-        audio.playsInline = true
-        audio.autoplay = true
         audio.onended = () => URL.revokeObjectURL(url)
         audio.onerror = () => URL.revokeObjectURL(url)
-        try {
-          await audio.play()
-        } catch (err) {
-          console.warn('audio play blocked', err)
-          try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)()
-            if (ctx.state === 'suspended') await ctx.resume()
-          } catch {}
-          // foydalanuvchiga ko'rsatish uchun error ni set qilish mumkin
-          setError('Ovoz avtomatik eshittirilmadi — ekranga bir marta bosing')
-          setTimeout(() => setError(null), 3000)
-        }
+        await audio.play()
+        // haptic
         if (navigator.vibrate) navigator.vibrate(120)
       } catch (e) {
         console.error('play error', e)
       }
     })
     socket.on('ptt:audio', async ({ from, chunk }) => {
+      // alternative streaming path - treat as blob
       try {
         let b = chunk
         if (chunk instanceof ArrayBuffer) b = new Blob([chunk], { type: 'audio/webm' })
         const url = URL.createObjectURL(b)
         const a = new Audio(url)
-        a.playsInline = true
         a.onended = () => URL.revokeObjectURL(url)
-        try { await a.play() } catch {}
+        await a.play()
       } catch {}
     })
     socket.on('ptt:busy', (m) => setError(m.message))
@@ -128,13 +112,14 @@ export function useRatsia(serverUrl, userId) {
   const sendEnd = useCallback((to) => {
     socketRef.current?.emit('ptt:end', { to })
   }, [])
-  const sendBlob = useCallback((to, blob, mimeType) => {
+  const sendBlob = useCallback((to, blob) => {
+    // send as ArrayBuffer for reliability
     if (blob instanceof Blob) {
       blob.arrayBuffer().then(buf => {
-        socketRef.current?.emit('ptt:blob', { to, blob: buf, mimeType: mimeType || blob.type || 'audio/webm' })
+        socketRef.current?.emit('ptt:blob', { to, blob: buf })
       })
     } else {
-      socketRef.current?.emit('ptt:blob', { to, blob, mimeType: mimeType || 'audio/webm' })
+      socketRef.current?.emit('ptt:blob', { to, blob })
     }
   }, [])
   const sendCancel = useCallback((to) => {
