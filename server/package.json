@@ -1,0 +1,16 @@
+{
+  "name": "ratsia-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Onlayn ratsiya - 1ga-1 PTT server (uy kompyuter uchun)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "socket.io": "^4.7.5"
+  }
+}

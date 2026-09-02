@@ -1,0 +1,10 @@
+[
+  { "id": "ceo", "name": "Sardor", "role": "CEO", "avatar": "S" },
+  { "id": "cofounder", "name": "Javohir", "role": "CO-FOUNDER", "avatar": "J" },
+  { "id": "md", "name": "Jasur", "role": "Managing Director", "avatar": "J" },
+  { "id": "aziza", "name": "Aziza", "role": "Dizayner", "avatar": "A" },
+  { "id": "bobur", "name": "Bobur", "role": "Sotuv", "avatar": "B" },
+  { "id": "dilnoza", "name": "Dilnoza", "role": "HR", "avatar": "D" },
+  { "id": "farhod", "name": "Farhod", "role": "Dasturchi", "avatar": "F" },
+  { "id": "laylo", "name": "Laylo", "role": "Marketing", "avatar": "L" }
+]
