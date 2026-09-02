@@ -121,8 +121,8 @@ io.on("connection", (socket) => {
     io.to(targetSocketId).emit("ptt:audio", { from, to, chunk });
   });
 
-  // alternative: single blob message (simpler client)
-  socket.on("ptt:blob", ({ to, blob }) => {
+  // alternative: single blob message (simpler client) — mimeType bilan birga
+  socket.on("ptt:blob", ({ to, blob, mimeType }) => {
     const from = socketToUser.get(socket.id);
     if (!from || !to) return;
     const targetSocketId = onlineUsers.get(to);
@@ -130,8 +130,8 @@ io.on("connection", (socket) => {
       socket.emit("ptt:error", { message: "Qabul qiluvchi oflayn" });
       return;
     }
-    console.log(`[ptt:blob] ${from} -> ${to} (${blob?.length || blob?.byteLength || 0} bytes)`);
-    io.to(targetSocketId).emit("ptt:blob", { from, to, blob });
+    console.log(`[ptt:blob] ${from} -> ${to} (${blob?.length || blob?.byteLength || 0} bytes) ${mimeType||''}`);
+    io.to(targetSocketId).emit("ptt:blob", { from, to, blob, mimeType });
     // also send delivered ack to sender
     socket.emit("ptt:delivered", { to });
   });
